@@ -9,6 +9,7 @@ router = APIRouter()
 @router.get("/prodotti")
 def lista_prodotti():
     conn = sqlite3.connect("database.db")
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM prodotti")
     risultato = cursor.fetchall()
@@ -19,6 +20,7 @@ def lista_prodotti():
 @router.get("/prodotti/{id_prodotto}")
 def lista_prodotto_singolo(id_prodotto: int):
     conn = sqlite3.connect("database.db")
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM prodotti WHERE id = ?", (id_prodotto,))
     risultato = cursor.fetchone() # fetchone() restituisce None se vuoto
