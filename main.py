@@ -1,4 +1,6 @@
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import sqlite3
 
 app = FastAPI()
 
@@ -44,3 +46,50 @@ def ottieni_prodotto(id_cercato: int):
             return prodotto
             
     raise HTTPException(status_code=404, detail="Prodotto non trovato")
+
+#miopro = ProdottoIn("asd", 1)
+
+class ProdottoIn(BaseModel):
+    nome: str
+    prezzo: float
+
+#mioprodotto = ProdottoIn("shampo", 1.20)
+
+@app.get("/prodotti")
+def lista_prodotti():
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM prodotti")
+    risultato = cursor.fetchall()
+    conn.close()
+    return risultato
+
+@app.post("/prodotti", status_code=201)
+def crea_prodotto(dati: ProdottoIn):
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO prodotti (nome, prezzo) VALUES (?, ?)", (dati.nome, dati.prezzo))
+    conn.commit()
+    conn.close()
+    return {"status": "Prodotto registrato con successo"}
+
+@app.put("/prodotto/{id_prodotto}")
+def aggiorna_prodotto(id_prodotto: int, dati: ProdottoIn):
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE prodotti SET nome = ?, prezzo = ? WHERE id = ?", (dati.nome, dati.prezzo, id_prodotto))
+    conn.commit()
+    conn.close()
+    return {"status": "Modifica salvata"}
+
+@app.delete("/prodotto/{id_prodotto}")
+def elimina(id_prodotto: int):
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "DELETE FROM prodotti WHERE id=?",
+        (id_prodotto,)
+    )
+    conn.commit()
+    conn.close()
+    return {"status": "Cancellato"}
