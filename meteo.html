@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Visualizzatore Meteo con Paginazione</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f0f4f8; color: #333; padding: 20px; }
+        .box { background: white; padding: 20px; border-radius: 8px; max-width: 800px; margin: 0 auto 20px auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        textarea { width: 100%; height: 120px; box-sizing: border-box; padding: 10px; border: 2px solid #ccc; border-radius: 4px; }
+        
+        /* Bottoni principali */
+        .btn-primary { width: 100%; background: #007bff; color: white; border: none; padding: 12px; font-size: 16px; cursor: pointer; border-radius: 4px; margin-top: 10px; font-weight: bold; }
+        .btn-primary:hover { background: #0056b3; }
+        
+        /* Stili Paginatore */
+        .paginator-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; margin-bottom: 15px; justify-content: center; }
+        .page-btn { background: #e9ecef; color: #4a5568; border: 1px solid #cbd5e0; padding: 8px 14px; font-size: 14px; cursor: pointer; border-radius: 20px; font-weight: 500; transition: all 0.2s; }
+        .page-btn:hover { background: #cbd5e0; }
+        .page-btn.active { background: #2b6cb0; color: white; border-color: #2b6cb0; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #e9ecef; }
+        .bar-out { background: #e9ecef; border-radius: 10px; width: 100px; height: 12px; display: inline-block; vertical-align: middle; }
+        .bar-in { background: #5bc0de; height: 100%; border-radius: 10px; }
+        .temp { color: #d9534f; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>Dashboard Open-Meteo</h2>
+    <p>Incolla il JSON di risposta qui sotto e premi il bottone:</p>
+    <textarea id="jsonInput" placeholder="Incolla il JSON qui..."></textarea>
+    <button id="btnInvia" class="btn-primary">Visualizza Dati</button>
+</div>
+
+<div class="box" id="tabellaRisultati" style="display:none;">
+    <h3 style="text-align: center; margin-top: 0;">Seleziona un giorno:</h3>
+    
+    <div id="paginatoreGiorni" class="paginator-container"></div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Ora</th>
+                <th>Temperatura</th>
+                <th>Probabilità Pioggia</th>
+            </tr>
+        </thead>
+        <tbody id="corpoTabella"></tbody>
+    </table>
+</div>
+
+<script>
+    // Variabile globale temporanea per salvare i dati divisi per giorno
+    var datiMeteoRaggruppati = {};
+
+    document.getElementById('btnInvia').addEventListener('click', function() {
+        var txt = document.getElementById('jsonInput').value.trim();
+        if (!txt) {
+            alert('Incolla prima il JSON!');
+            return;
+        }
+
+        try {
+            var data = JSON.parse(txt);
+            if (!data.hourly || !data.hourly.time) {
+                alert('Formato JSON non valido per Open-Meteo.');
+                return;
+            }
+
+            // Resetta i dati raggruppati e il paginatore grafico
+            datiMeteoRaggruppati = {};
+            var paginatore = document.getElementById('paginatoreGiorni');
+            paginatore.innerHTML = '';
+
+            var tempi = data.hourly.time;
+            var temperature = data.hourly.temperature_2m || [];
+            var pioggia = data.hourly.precipitation_probability || [];
+
+            // 1. Raggruppiamo i dati orari per data "YYYY-MM-DD"
+            for (var i = 0; i < tempi.length; i++) {
+                var partiDistanziate = tempi[i].split('T'); // Divide data da ora
+                var dataGiorno = partiDistanziate[0]; // Es: "2026-06-03"
+                var oraStr = partiDistanziate[1];     // Es: "14:00"
+
+                if (!datiMeteoRaggruppati[dataGiorno]) {
+                    datiMeteoRaggruppati[dataGiorno] = [];
+                }
+
+                datiMeteoRaggruppati[dataGiorno].push({
+                    ora: oraStr,
+                    temp: temperature[i] !== undefined ? temperature[i] + ' °C' : 'N/D',
+                    pioggiaProb: pioggia[i] !== undefined ? pioggia[i] : 0
+                });
+            }
+
+            // 2. Generiamo i bottoni del paginatore per ogni giorno trovato
+            var giorniDisponibili = Object.keys(datiMeteoRaggruppati);
+            
+            giorniDisponibili.forEach(function(giorno) {
+                // Formattiamo la data del bottone da YYYY-MM-DD a DD/MM
+                var partiData = giorno.split('-');
+                var dataFormattataBottone = partiData[2] + '/' + partiData[1];
+
+                var bottone = document.createElement('button');
+                bottone.className = 'page-btn';
+                bottone.innerText = dataFormattataBottone;
+                
+                // Evento click sul bottone del giorno
+                bottone.addEventListener('click', function() {
+                    // Rimuove la classe attiva da tutti i bottoni
+                    var allBtns = paginatore.getElementsByClassName('page-btn');
+                    for (var b = 0; b < allBtns.length; b++) {
+                        allBtns[b].classList.remove('active');
+                    }
+                    // Aggiunge classe attiva a questo bottone
+                    bottone.classList.add('active');
+                    
+                    // Mostra i dati di quel giorno specifico
+                    mostraGiornoSelezionato(giorno);
+                });
+
+                paginatore.appendChild(bottone);
+            });
+
+            // 3. Mostra la sezione dei risultati e simula il click sul primo giorno per default
+            document.getElementById('tabellaRisultati').style.display = 'block';
+            if(paginatore.firstChild) {
+                paginatore.firstChild.click();
+            }
+
+        } catch (errore) {
+            alert('Il testo incollato non è un JSON valido. Controlla di averlo copiato tutto.');
+            console.error(errore);
+        }
+    });
+
+    // Funzione interna per iniettare nella tabella solo le 24 ore del giorno cliccato
+    function mostraGiornoSelezionato(giornoKey) {
+        var corpo = document.getElementById('corpoTabella');
+        corpo.innerHTML = ''; // Svuota la tabella precedente
+
+        var oreDelGiorno = datiMeteoRaggruppati[giornoKey];
+
+        oreDelGiorno.forEach(function(item) {
+            var riga = document.createElement('tr');
+            
+            var htmlRiga = '<td>ore ' + item.ora + '</td>' +
+                           '<td class="temp">' + item.temp + '</td>' +
+                           '<td>' +
+                           '<div class="bar-out"><div class="bar-in" style="width:' + item.pioggiaProb + '%"></div></div>' +
+                           ' <span style="margin-left:5px;">' + item.pioggiaProb + '%</span>' +
+                           '</td>';
+            
+            riga.innerHTML = htmlRiga;
+            corpo.appendChild(riga);
+        });
+    }
+</script>
+
+</body>
+</html>

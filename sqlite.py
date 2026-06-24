@@ -19,17 +19,18 @@ conn.commit()
 #cursor.executemany("INSERT INTO prodotti (nome, prezzo) VALUES (?, ?)", lista_prodotti)
 
 #conn.commit()
-cursor.execute("SELECT * FROM prodotti")
-risultato = cursor.fetchall()
-print(risultato)
+#cursor.execute("SELECT * FROM prodotti")
+#risultato = cursor.fetchall()
+#print(risultato)##
 
-conn.row_factory = sqlite3.Row
-cursor = conn.cursor()
-cursor.execute(
-"SELECT * FROM prodotti WHERE nome LIKE ?",
-(f"%{"mon"}%",)
-)
-risultati = cursor.fetchall()
-for riga in risultati:
-    print(dict(riga))
-conn.close()
+#conn.row_factory = sqlite3.Row
+#cursor = conn.cursor()
+#cursor.execute(
+#"SELECT * FROM prodotti WHERE nome LIKE ?",
+#(f"%{"mon"}%",)
+#)
+#risultati = cursor.fetchall()
+#for riga in risultati:
+#    print(dict(riga))
+#conn.close()
+
