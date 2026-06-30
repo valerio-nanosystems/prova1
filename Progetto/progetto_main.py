@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Importo il resto del progetto
 from .progetto_prodotti import router as prodotti_router
 from .progetto_utente import router as utente_router
+from .progetto_film import router as film_router
 from .progetto_db import dbinit
 
 # Inizializzo il DB
@@ -22,6 +23,7 @@ app.add_middleware(
 )
 app.include_router(prodotti_router)
 app.include_router(utente_router)
+app.include_router(film_router)
 
 # Creo una chiamata base di benvenuto
 @app.get("/")
